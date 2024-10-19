@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 3.14)
 
-project(LSM)
+project(InvertedIndex)
 
 set(CMAKE_CXX_STANDARD 23)
 
 add_executable(
-        lsm
+        inverted_index
         main.cpp
-        lsm.cpp
+        inverted_index.cpp
 )
 
 include(FetchContent)
@@ -26,15 +26,21 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(spdlog)
 
-target_link_libraries(lsm PRIVATE spdlog::spdlog)
+target_link_libraries(inverted_index PRIVATE spdlog::spdlog)
 
 add_executable(
-        lsm_tests
-        lsm_tests.cpp
+        inverted_index_tests
+        inverted_index_tests.cpp
 )
 
-target_link_libraries(lsm_tests gtest gtest_main spdlog::spdlog)
+target_link_libraries(inverted_index_tests gtest gtest_main spdlog::spdlog)
+
+add_custom_target(
+        copy_static ALL
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/static $<TARGET_FILE_DIR:inverted_index_tests>/static
+)
 
 enable_testing()
 
-add_test(NAME LSMTest COMMAND lsm_tests)
+add_test(NAME InvertedIndexTest COMMAND inverted_index_tests)

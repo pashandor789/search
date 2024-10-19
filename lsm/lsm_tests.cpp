@@ -1,10 +1,34 @@
 #include <gtest/gtest.h>
 #include <random>
 #include "lsm.h"
+#include "types.h"
 
 #include "spdlog/spdlog.h"
 
-TEST(LSMTree, CorrectnessPointRequest) {
+#include <cstring>
+
+TEST(LSMTree, TStringTest) {
+    std::filesystem::remove_all("./test");
+    std::filesystem::create_directory("./test");
+    TLSMTree<TString<128>, TString<128>> lsm("./test");
+
+    auto getKey = [](size_t i) -> TString<128> { return "sex" + std::to_string(i); };
+    auto getValue = [](size_t i)-> TString<128> { return "plz" + std::to_string(i); };
+
+    for (size_t i = 0; i < TMemTable<TString<128>, TString<128>>::MAX_SIZE * 2; ++i) {
+        lsm.Insert(getKey(i), getValue(i));
+    }
+
+    for (size_t i = 0; i < TMemTable<TString<128>, TString<128>>::MAX_SIZE * 2; ++i) {
+        auto maybeEntry = lsm.ReadPoint(getKey(i));
+        ASSERT_TRUE(maybeEntry.has_value()) << "not found: " << i;
+        auto& [k, v] = maybeEntry.value();
+        ASSERT_EQ(k, getKey(i));
+        ASSERT_EQ(v, getValue(i));
+    }
+}
+
+TEST(LSMTree, IntCorrectnessPointRequest) {
     const size_t DATA_SIZE = 1'024'000;
 
     const int64_t MIN_RAND = -1'000'000;
@@ -48,7 +72,7 @@ TEST(LSMTree, CorrectnessPointRequest) {
     }
 }
 
-TEST(LSMTree, CorrectnessRangeRequest) {
+TEST(LSMTree, IntCorrectnessRangeRequest) {
     const int DATA_SIZE = 1'024'000;
 
     const int64_t MIN_RAND = -1'000'000;

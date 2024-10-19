@@ -6,14 +6,21 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <set>
 #include <string>
 #include <printf.h>
 #include <vector>
 
 #include "spdlog/spdlog.h"
 
-
 namespace NSSTable {
+    // Helper struct to check if TKey is hashable
+    template <typename TKey, typename = void>
+    struct is_hashable : std::false_type {};
+
+    template <typename TKey>
+    struct is_hashable<TKey, std::void_t<decltype(std::hash<TKey>{}(std::declval<TKey>()))>> : std::true_type {};
+
     template <typename TKey>
     class TBloomFilter {
     public:
@@ -47,7 +54,12 @@ namespace NSSTable {
         std::size_t HashCount;
 
         std::size_t Hash(const TKey& item, size_t seed) const {
-            return std::hash<TKey>()(item) + seed * 0x9e3779b9;
+            if constexpr (is_hashable<TKey>::value) {
+                return std::hash<TKey>()(item) + seed * 0x9e3779b9;
+            } else {
+                std::string s(reinterpret_cast<const char *>(&item), sizeof(item));
+                return std::hash<std::string>()(s) + seed * 0x9e3779b9;
+            }
         }
     };
 
@@ -58,13 +70,11 @@ namespace NSSTable {
     };
 }
 
-
 template <typename TKey, typename TValue>
 class TMemTable {
 public:
     using TEntry = std::pair<TKey, TValue>;
     const static std::size_t MAX_SIZE = 10'240ull;
-//    const static std::size_t MAX_SIZE = 10ull;
 
 public:
     explicit TMemTable()
@@ -82,15 +92,16 @@ public:
             return std::nullopt;
         }
 
-        auto it = std::find_if(Data.begin(), Data.end(), [&key](const TEntry& e){ return e.first == key; });
-        if (it == Data.end()) {
+        auto it = std::find_if(Data.rbegin(), Data.rend(), [&key](const TEntry& e){ return e.first == key; });
+        if (it == Data.rend()) {
             return std::nullopt;
         }
         return *it;
     }
 
     NSSTable::TMeta<TKey> DumpAsSSTable(const std::filesystem::path& path) {
-        std::sort(Data.begin(), Data.end());
+        std::set<TEntry> uniqueLastOccur(std::make_move_iterator(Data.rbegin()), std::make_move_iterator(Data.rend()));
+        Data = {std::make_move_iterator(uniqueLastOccur.begin()), std::make_move_iterator(uniqueLastOccur.end())};
 
         NSSTable::TMeta<TKey> metaData = {.Size = Data.size(), .BloomFilter = BloomFilter};
         std::ofstream fOut(path, std::ios::out | std::ios::binary);
@@ -121,21 +132,23 @@ public:
     };
 
     struct TStatistics {
-        size_t BloomFilterReadPointFalsePositive = 0;
-        size_t BloomFilterReadPointLookupCount = 0;
-        size_t LookUpCount = 0;
-        size_t MemTableSuccessLookupCount = 0;
+        std::size_t BloomFilterReadPointFalsePositive = 0;
+        std::size_t BloomFilterReadPointLookupCount = 0;
+        std::size_t LookUpCount = 0;
+        std::size_t MemTableSuccessLookupCount = 0;
+        std::size_t InsertCount = 0;
 
         ~TStatistics() {
             std::stringstream ss;
             ss
-                << "Statistics: \n\t"
+                << "LSMTree Statistics: \n\t"
                 << "LookUpCount: " << LookUpCount << "\n\t"
                 << "MemTableSuccessLookupCount: " << MemTableSuccessLookupCount << "\n\t"
                 << "BloomFilterReadPointFalsePositive: " << BloomFilterReadPointFalsePositive << "\n\t"
-                << "BloomFilterReadPointLookupCount: " << BloomFilterReadPointLookupCount << "\n\t" ;
+                << "BloomFilterReadPointLookupCount: " << BloomFilterReadPointLookupCount << "\n\t"
+                << "InsertCount: " << InsertCount << "\n\t";
 
-            std::cerr <<ss.str();
+            std::cerr << ss.str();
         }
     };
 
@@ -147,6 +160,7 @@ public:
     }
 
     void Insert(TKey key, TValue value) {
+        ++Stats.InsertCount;
         MemTable.Insert(std::move(key), std::move(value));
         if (MemTable.Size() == TMemTable<TKey, TValue>::MAX_SIZE) {
             auto ssTableMeta = MemTable.DumpAsSSTable(GetSSTablePath(MetaData.SSTableMeta.size()));
@@ -271,7 +285,7 @@ private:
     }
 
     void CompactSSTables() {
-        spdlog::info("Compacting SSTables.");
+        spdlog::debug("Compacting SSTables.");
 
         size_t beforeSize = MetaData.SSTableMeta.size();
         for (size_t i = MetaData.SSTableMeta.size() - 1; i != 0; --i) {
@@ -282,7 +296,7 @@ private:
             }
         }
 
-        spdlog::info("Before the compaction: " + std::to_string(beforeSize) + ", after the compaction: " + std::to_string(MetaData.SSTableMeta.size()));
+        spdlog::debug("Before the compaction: " + std::to_string(beforeSize) + ", after the compaction: " + std::to_string(MetaData.SSTableMeta.size()));
     }
 
     NSSTable::TMeta<TKey> MergeSSTables(size_t lhsInd, size_t rhsInd) {

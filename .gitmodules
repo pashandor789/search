@@ -1,0 +1,3 @@
+[submodule "contrib/OleanderStemmingLibrary"]
+	path = contrib/OleanderStemmingLibrary
+	url = https://github.com/Blake-Madden/OleanderStemmingLibrary.git

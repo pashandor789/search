@@ -1,3 +1,4 @@
 data/
 cmake*/
 test/
+.idea
