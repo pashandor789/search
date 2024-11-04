@@ -8,6 +8,9 @@ add_executable(
         inverted_index
         main.cpp
         inverted_index.cpp
+        logic_algebra.h
+        text_processor.h
+        utils.h
 )
 
 include(FetchContent)

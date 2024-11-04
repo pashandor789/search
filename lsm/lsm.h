@@ -210,6 +210,19 @@ public:
         }
     }
 
+    std::vector<TEntry> ReadPoints(const std::vector<TKey>& keys) const {
+        std::vector<TEntry> res;
+        res.reserve(keys.size());
+
+        for (const auto& key: keys) {
+            if (auto maybeEntry = ReadPoint(key)) {
+                res.push_back(std::move(maybeEntry.value()));
+            }
+        }
+
+        return res;
+    }
+
     std::optional<TEntry> ReadPoint(const TKey& key) const {
         ++Stats.LookUpCount;
 
