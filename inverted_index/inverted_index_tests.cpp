@@ -25,7 +25,7 @@ std::string Join(const std::vector<std::string>& words) {
 
 TEST(TextProcessor, Basic) {
     TTextProcessor processor;
-    std::string s = "give me the documentation of the having sex plz";
+    std::string s = "give me the documentation of the\n\thaving sex plz\n\t\n";
     ASSERT_EQ("give me document have sex plz", Join(processor.Process(s)));
 }
 

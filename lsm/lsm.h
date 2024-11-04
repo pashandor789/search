@@ -141,6 +141,7 @@ public:
         ~TStatistics() {
             std::stringstream ss;
             ss
+                << "\n"
                 << "LSMTree Statistics: \n\t"
                 << "LookUpCount: " << LookUpCount << "\n\t"
                 << "MemTableSuccessLookupCount: " << MemTableSuccessLookupCount << "\n\t"
@@ -148,7 +149,7 @@ public:
                 << "BloomFilterReadPointLookupCount: " << BloomFilterReadPointLookupCount << "\n\t"
                 << "InsertCount: " << InsertCount << "\n\t";
 
-            std::cerr << ss.str();
+            spdlog::debug(ss.str());
         }
     };
 
@@ -288,12 +289,12 @@ private:
         std::filesystem::path MetaDataPath = SourcePath / "meta";
 
         if (!std::filesystem::exists(MetaDataPath)) {
-            spdlog::info("There is no LSM Tree on the disk.");
+            spdlog::debug("There is no LSM Tree on the disk.");
             return;
         }
 
         std::ifstream fIn(MetaDataPath, std::ios::in | std::ios::binary);
-        spdlog::info("Loading LSM meta data from the disk.");
+        spdlog::debug("Loading LSM meta data from the disk.");
         fIn.read(reinterpret_cast<char*>(&MetaData), sizeof(MetaData));
     }
 

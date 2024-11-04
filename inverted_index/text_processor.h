@@ -51,6 +51,7 @@ public:
         if (opts.AddStemming) {
             for (std::string &token: tokens) {
                 processedWords.push_back(token);
+                stemmer.Stem(processedWords.back());
             }
         } else {
             processedWords = tokens;
