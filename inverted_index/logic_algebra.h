@@ -125,7 +125,7 @@ namespace NLogicAlgebra {
     template <typename... Args>
     std::shared_ptr<IASTNode> And(Args... args) {
         return Operation(EOperation::EAnd, args...);
-    }
+    } // And("asdf", "sadfsdaf, "sadfasdf")
 
     template <typename... Args>
     std::shared_ptr<IASTNode> Or(Args... args) {
