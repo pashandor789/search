@@ -90,3 +90,26 @@ TEST(TInvertedPatternIndex, Basic) {
     ASSERT_EQ(index.FindDocsByPattern("ell*worl*").GetIDs(), expected);
     ASSERT_EQ(index.FindDocsByPrefix("ell").GetIDs(), expected);
 }
+
+TEST(TInvertedDateIntervalIndex, Basic) {
+    TInvertedDateIntervalIndex index;
+
+    index.AddDocument(CreateDocument("doc1"), 0, 1);
+    index.AddDocument(CreateDocument("doc2"), 2, 3);
+    index.AddDocument(CreateDocument("doc3"), 2, 3);
+    index.AddDocument(CreateDocument("doc4"), 2, 3);
+    index.AddDocument(CreateDocument("doc5"), 5, 6);
+
+    std::vector<std::size_t> expected = {0};
+    ASSERT_EQ(index.FindDocsByInterval(0, 1).GetIDs(), expected);
+
+    expected = {0, 1, 2, 3};
+    ASSERT_EQ(index.FindDocsByInterval(0, 3).GetIDs(), expected);
+
+    expected = {1, 2, 3};
+    ASSERT_EQ(index.FindDocsByInterval(2, 3).GetIDs(), expected);
+
+    expected = {4};
+    ASSERT_EQ(index.FindDocsByInterval(5, 6).GetIDs(), expected);
+}
+

@@ -53,9 +53,8 @@ public:
         return *this;
     }
 
-    TDocs<MaxDocCount>& Not() {
-        Docs = ~Docs;
-        return *this;
+    TDocs<MaxDocCount> Not() const {
+        return ~Docs;
     }
 
     std::string String() {
